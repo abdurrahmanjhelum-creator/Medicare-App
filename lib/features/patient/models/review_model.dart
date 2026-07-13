@@ -1,24 +1,31 @@
 class ReviewModel {
+  final String? id;
   final String doctorId;
-  final String userName;
-  final String reviewText;
-  final String rating;
-
+  final String appointmentId;
+  final String patientName;
+  final String comment;
+  final double rating;
+  final String? createdAt;
 
   const ReviewModel({
+    this.id,
     required this.doctorId,
-    required this.userName,
-    required this.reviewText,
+    required this.appointmentId,
+    required this.patientName,
+    required this.comment,
     required this.rating,
-
+    this.createdAt,
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
     return ReviewModel(
+      id: json['_id']?.toString() ?? json['id']?.toString(),
       doctorId: json['doctorId']?.toString() ?? '',
-      userName: json['userName'] ?? json['patientName'] ?? '',
-      reviewText: json['reviewText'] ?? json['comment'] ?? '',
-      rating: json['rating']?.toString() ?? '0',
+      appointmentId: json['appointmentId']?.toString() ?? '',
+      patientName: json['patientName'] ?? json['userName'] ?? 'Anonymous',
+      comment: json['comment'] ?? json['reviewText'] ?? '',
+      rating: (json['rating'] ?? 0).toDouble(),
+      createdAt: json['createdAt']?.toString(),
     );
   }
 }

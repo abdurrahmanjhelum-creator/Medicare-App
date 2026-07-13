@@ -43,92 +43,18 @@ class MedicalRecordNotifier extends StateNotifier<MedicalRecordState> {
     try {
       // API se data fetch karein
       final response = await ApiService.get(
-        endpoint: '/medical-records',
-        queryParams: {'patientId': patientId},
+        endpoint: '/medical-records/patient/$patientId',
         auth: true,
       );
-      
-      // API response se records list create karein
-      final recordsList = (response['data'] as List)
+
+      final list = ApiService.unwrapList(response, listKey: 'medicalRecords');
+      final recordsList = list
           .map((e) => MedicalRecordModel.fromJson(e))
           .toList();
       
       state = state.copyWith(
         isLoading: false,
         records: recordsList,
-      );
-    } catch (e) {
-      // Agar API fail ho jaye toh dummy data use karein
-      await Future.delayed(const Duration(seconds: 1));
-      
-      final dummyRecords = [
-        MedicalRecordModel(
-          id: 'mr1',
-          patientId: patientId,
-          patientName: 'Ahmed Khan',
-          doctorId: 'd1',
-          doctorName: 'Dr. Smith',
-          diagnosis: 'Viral fever',
-          prescription: 'Paracetamol 500mg - 3 times a day\nRest and fluids',
-          notes: 'Patient reported fever for 3 days',
-          attachments: [],
-          appointmentId: 'apt1',
-          createdAt: '2024-06-20',
-          updatedAt: '2024-06-20',
-        ),
-        MedicalRecordModel(
-          id: 'mr2',
-          patientId: patientId,
-          patientName: 'Ahmed Khan',
-          doctorId: 'd1',
-          doctorName: 'Dr. Smith',
-          diagnosis: 'Hypertension checkup',
-          prescription: 'Continue current medication\nBlood pressure monitoring',
-          notes: 'Regular follow-up required',
-          attachments: ['lab_report_1.pdf'],
-          appointmentId: 'apt2',
-          createdAt: '2024-06-15',
-          updatedAt: '2024-06-15',
-        ),
-      ];
-      
-      state = state.copyWith(
-        isLoading: false,
-        records: dummyRecords,
-      );
-    }
-  }
-
-  // Naya medical record create karein
-  Future<void> createMedicalRecord(Map<String, dynamic> recordData) async {
-    state = state.copyWith(isLoading: true);
-    
-    try {
-      // API call karein
-      await ApiService.post(
-        endpoint: '/medical-records',
-        body: recordData,
-        auth: true,
-      );
-      
-      final newRecord = MedicalRecordModel(
-        id: 'mr${DateTime.now().millisecondsSinceEpoch}',
-        patientId: recordData['patientId'],
-        patientName: recordData['patientName'],
-        doctorId: recordData['doctorId'],
-        doctorName: recordData['doctorName'],
-        diagnosis: recordData['diagnosis'],
-        prescription: recordData['prescription'],
-        notes: recordData['notes'],
-        attachments: recordData['attachments'] ?? [],
-        appointmentId: recordData['appointmentId'],
-        createdAt: DateTime.now().toString(),
-        updatedAt: DateTime.now().toString(),
-      );
-      
-      state = state.copyWith(
-        isLoading: false,
-        records: [newRecord, ...state.records],
       );
     } catch (e) {
       state = state.copyWith(
@@ -138,21 +64,47 @@ class MedicalRecordNotifier extends StateNotifier<MedicalRecordState> {
     }
   }
 
+  // Naya medical record create karein
+  Future<bool> createMedicalRecord(Map<String, dynamic> recordData) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      await ApiService.post(
+        endpoint: '/medical-records',
+        body: recordData,
+        auth: true,
+      );
+
+      final patientId = recordData['patientId']?.toString() ?? '';
+      if (patientId.isNotEmpty) {
+        await loadMedicalRecords(patientId);
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+      return false;
+    }
+  }
+
   // Medical record update karein
-  Future<void> updateMedicalRecord(
+  Future<bool> updateMedicalRecord(
     String recordId,
     Map<String, dynamic> updates,
   ) async {
-    state = state.copyWith(isLoading: true);
-    
+    state = state.copyWith(isLoading: true, error: null);
+
     try {
-      // API call karein
-      await ApiService.patch(
+      await ApiService.put(
         endpoint: '/medical-records/$recordId',
         body: updates,
         auth: true,
       );
-      
+
       final updatedRecords = state.records.map((record) {
         if (record.id == recordId) {
           return MedicalRecordModel(
@@ -167,21 +119,20 @@ class MedicalRecordNotifier extends StateNotifier<MedicalRecordState> {
             attachments: updates['attachments'] ?? record.attachments,
             appointmentId: record.appointmentId,
             createdAt: record.createdAt,
-            updatedAt: DateTime.now().toString(),
+            updatedAt: DateTime.now().toIso8601String(),
           );
         }
         return record;
       }).toList();
-      
-      state = state.copyWith(
-        isLoading: false,
-        records: updatedRecords,
-      );
+
+      state = state.copyWith(isLoading: false, records: updatedRecords);
+      return true;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: e.toString().replaceAll('Exception: ', ''),
       );
+      return false;
     }
   }
 

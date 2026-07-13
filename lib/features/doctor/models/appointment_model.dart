@@ -1,3 +1,5 @@
+import 'package:medicare/features/patient/models/appointment_model.dart';
+
 // Doctor Appointment Model - Doctor ke liye appointment ka data model
 class DoctorAppointmentModel {
   final String id;
@@ -11,6 +13,7 @@ class DoctorAppointmentModel {
   final String? patientNotes;
   final String? diagnosis;
   final String? prescription;
+  final String? specialization; // For compatibility if needed
 
   const DoctorAppointmentModel({
     required this.id,
@@ -24,26 +27,42 @@ class DoctorAppointmentModel {
     this.patientNotes,
     this.diagnosis,
     this.prescription,
+    this.specialization,
   });
 
-  // JSON se model create karne ke liye
+  // Patient side ki screens reuse karne ke liye conversion helper
+  AppointmentModel toAppointmentModel() {
+    return AppointmentModel(
+      id: id,
+      doctorimage: patientImage, // Doctor side pe patient ki image dikhayenge
+      doctorName: patientName,   // Doctor side pe patient ka naam dikhayenge header mein
+      specialization: specialization ?? 'Patient',
+      time: time,
+      type: type,
+      location: type == 'Video Call' ? 'Online' : 'Clinic',
+      status: status,
+      patientNotes: patientNotes,
+      date: date,
+    );
+  }
+
   factory DoctorAppointmentModel.fromJson(Map<String, dynamic> json) {
     return DoctorAppointmentModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      patientId: json['patientId'] ?? '',
-      patientName: json['patientName'] ?? '',
-      patientImage: json['patientImage'] ?? '',
-      date: json['date'] ?? '',
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      patientId: (json['patientId'] ?? json['patient']?['_id'] ?? json['patient']?['id'] ?? '').toString(),
+      patientName: json['patientName'] ?? json['patient']?['name'] ?? 'Patient',
+      patientImage: json['patientImage'] ?? json['patient']?['image'] ?? '',
+      date: json['date']?.toString() ?? '',
       time: json['time'] ?? '',
-      type: json['type'] ?? '',
+      type: json['type'] ?? json['appointmentType'] ?? 'Video Call',
       status: json['status'] ?? 'pending',
       patientNotes: json['patientNotes'],
       diagnosis: json['diagnosis'],
       prescription: json['prescription'],
+      specialization: json['specialization'],
     );
   }
 
-  // Model ko JSON mein convert karne ke liye
   Map<String, dynamic> toJson() {
     return {
       'id': id,

@@ -14,37 +14,33 @@ class BackToLoginButton extends StatelessWidget {
      
         child: Row(
           mainAxisSize: MainAxisSize.min,
-
           children: [
-
-             Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-            // BACK ARROW
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 20,
-              color: Color(0xFF64748B),
-            ),
-          ),
-
-            const SizedBox(width: 10),
-
-            // TEXT
-            Text(
-              text,
-
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF475569),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 20,
+                color: Color(0xFF64748B),
               ),
             ),
-              
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF475569),
+                ),
+              ),
+            ),
           ],
         ),
       );

@@ -94,6 +94,7 @@ class PatientRegisterNotifier extends StateNotifier<PatientRegisterState> {
         role: user['role'] as String,
         name: user['name'] as String,
         email: user['email'] as String,
+        phone: user['phone'] as String?, // Added phone here
       );
 
       state = state.copyWith(isLoading: false);

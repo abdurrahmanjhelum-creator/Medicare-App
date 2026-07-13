@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/refresh_backoff.dart';
+import '../../../core/services/token_service.dart';
 import '../models/appointment_model.dart';
 
 class AppointmentState {
@@ -36,6 +39,10 @@ class AppointmentState {
 }
 
 class AppointmentNotifier extends StateNotifier<AppointmentState> {
+  final RefreshBackoff _backoff = RefreshBackoff();
+  Timer? _refreshTimer;
+  bool _isFetching = false;
+
   AppointmentNotifier()
       : super(
           AppointmentState(
@@ -44,38 +51,87 @@ class AppointmentNotifier extends StateNotifier<AppointmentState> {
           ),
         ) {
     fetchAppointments();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(_backoff.currentInterval, (timer) {
+      fetchAppointments(silent: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   // Fetch appointments from backend
-  Future<void> fetchAppointments() async {
-    state = state.copyWith(isLoading: true, error: null);
+  Future<void> fetchAppointments({bool silent = false}) async {
+    if (_isFetching) return;
+
+    // Security check: Only fetch if the user is a patient
+    final role = await TokenService.getUserRole();
+    if (role != 'patient') {
+      return; 
+    }
+
+    _isFetching = true;
+
+    if (!silent) state = state.copyWith(isLoading: true, error: null);
     try {
       final response = await ApiService.get(
         endpoint: '/appointments',
         auth: true,
       );
 
-      final data = response['data'] ?? response;
-      if (data is List) {
-        final allAppointments = data.map((app) => AppointmentModel.fromJson(app)).toList();
-        final upcoming = allAppointments.where((a) => a.status == 'Upcoming' || a.status == 'pending' || a.status == 'confirmed').toList();
-        final completed = allAppointments.where((a) => a.status == 'Completed' || a.status == 'cancelled').toList();
-        
-        state = state.copyWith(
-          upcomingAppointments: upcoming,
-          completedAppointments: completed,
-          isLoading: false,
-        );
-      } else {
-        state = state.copyWith(isLoading: false);
-      }
-    } catch (e) {
+      final list = ApiService.unwrapList(response, listKey: 'appointments');
+      final allAppointments =
+          list.map((app) => AppointmentModel.fromJson(app)).toList();
+      
+      final upcoming = allAppointments
+          .where((a) {
+            final s = a.status.toLowerCase();
+            return s == 'upcoming' ||
+                s == 'pending' ||
+                s == 'confirmed' ||
+                s == 'rescheduled';
+          })
+          .toList();
+      
+      final completed = allAppointments
+          .where((a) {
+            final s = a.status.toLowerCase();
+            return s == 'completed' ||
+                s == 'cancelled' ||
+                s == 'rejected';
+          })
+          .toList();
+
       state = state.copyWith(
+        upcomingAppointments: upcoming,
+        completedAppointments: completed,
         isLoading: false,
-        error: e.toString(),
+        error: null,
       );
-      // Load dummy data on error
-      _loadDummyData();
+      _backoff.recordSuccess();
+    } catch (e) {
+      _backoff.recordFailure();
+      // Handle "Insufficient permissions" silently to avoid log spam if role changes
+      if (e.toString().contains('permissions')) {
+        _refreshTimer?.cancel(); // Stop polling if we shouldn't be here
+        return;
+      }
+      
+      if (!silent) {
+        state = state.copyWith(
+          isLoading: false,
+          error: e.toString(),
+        );
+      }
+    } finally {
+      _isFetching = false;
     }
   }
 
@@ -97,10 +153,19 @@ class AppointmentNotifier extends StateNotifier<AppointmentState> {
 
   // Cancel appointment
   Future<bool> cancelAppointment(String appointmentId) async {
+    return cancelAppointmentWithReason(appointmentId, 'Cancelled by patient');
+  }
+
+  // Cancel appointment with body
+  Future<bool> cancelAppointmentWithReason(String appointmentId, String reason) async {
     try {
       await ApiService.delete(
         endpoint: '/appointments/cancel',
         auth: true,
+        body: {
+          'appointmentId': appointmentId,
+          'reason': reason,
+        },
       );
       await fetchAppointments();
       return true;
@@ -119,76 +184,9 @@ class AppointmentNotifier extends StateNotifier<AppointmentState> {
       upcomingAppointments: [...state.upcomingAppointments, appointment],
     );
   }
-
-  void _loadDummyData() {
-    state = state.copyWith(
-      upcomingAppointments: [
-        const AppointmentModel(
-          doctorimage: "https://img.freepik.com/free-photo/woman-doctor-wearing-lab-coat-with-stethoscope-isolated_1303-29791.jpg",
-          doctorName: "Dr. Sarah Johnson",
-          specialization: "Cardiologist",
-          time: "10:30 AM - 11:00 AM",
-          type: "Video Call",
-          location: "Online",
-          status: "Upcoming",
-        ),
-        const AppointmentModel(
-          doctorimage: "https://img.freepik.com/free-photo/successful-medical-team_329181-9252.jpg",
-          doctorName: "Dr. Michael Chen",
-          specialization: "Dermatologist",
-          time: "02:00 PM - 02:30 PM",
-          type: "In-Person",
-          location: "City Hospital",
-          status: "Upcoming",
-        ),
-        const AppointmentModel(
-          doctorimage: "https://img.freepik.com/free-photo/handsome-young-male-doctor-with-stethoscope-standing-against-blue-background_662251-343.jpg",
-          doctorName: "Dr. David Smith",
-          specialization: "Orthopedic",
-          time: "04:30 PM - 05:00 PM",
-          type: "In-Person",
-          location: "Med Central",
-          status: "Upcoming",
-        ),
-        const AppointmentModel(
-          doctorimage: "https://img.freepik.com/free-photo/doctor-with-stethoscope-around-his-neck_1150-18456.jpg",
-          doctorName: "Dr. Robert Brown",
-          specialization: "Neurologist",
-          time: "09:00 AM - 09:30 AM",
-          type: "Video Call",
-          location: "Online",
-          status: "Upcoming",
-        ),
-      ],
-      completedAppointments: [
-        const AppointmentModel(
-          doctorimage: "https://img.freepik.com/free-photo/smiling-female-doctor-holding-clipboard-looking-camera_107420-65158.jpg",
-          doctorName: "Dr. Emily White",
-          specialization: "General Physician",
-          time: "09:00 AM - 09:30 AM",
-          type: "In-Person",
-          location: "West Wing Clinic",
-          status: "Completed",
-        ),
-        const AppointmentModel(
-          doctorimage: "https://img.freepik.com/free-photo/doctor-with-stethoscope-around-his-neck_1150-18456.jpg",
-          doctorName: "Dr. James Wilson",
-          specialization: "Neurologist",
-          time: "11:30 AM - 12:00 PM",
-          type: "Video Call",
-          location: "Online",
-          status: "Completed",
-        ),
-        const AppointmentModel(
-          doctorimage: "https://img.freepik.com/free-photo/portrait-smiling-handsome-male-doctor-man_1303-21443.jpg",
-          doctorName: "Dr. Thomas Miller",
-          specialization: "Oncologist",
-          time: "03:00 PM - 03:30 PM",
-          type: "In-Person",
-          location: "Central Hospital",
-          status: "Completed",
-        ),
-      ],
-    );
-  }
 }
+
+final appointmentProvider =
+    StateNotifierProvider<AppointmentNotifier, AppointmentState>((ref) {
+  return AppointmentNotifier();
+});

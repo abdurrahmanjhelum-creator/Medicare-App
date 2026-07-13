@@ -49,23 +49,20 @@ class PharmacyNotifier extends StateNotifier<PharmacyState> {
         auth: false,
       );
 
-      final data = response['data'] ?? response;
-      if (data is List) {
-        final medicines = data.map((m) => Medicine.fromJson(m)).toList();
-        state = state.copyWith(
-          medicineList: medicines,
-          isLoading: false,
-        );
-      } else {
-        state = state.copyWith(isLoading: false);
-      }
+      final data = ApiService.unwrapMap(response);
+      final list = data['medicines'] is List
+          ? data['medicines'] as List
+          : ApiService.unwrapList(response, listKey: 'medicines');
+      final medicines = list.map((m) => Medicine.fromJson(m)).toList();
+      state = state.copyWith(
+        medicineList: medicines,
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
       );
-      // Load dummy data on error
-      _loadDummyData();
     }
   }
 
@@ -78,16 +75,15 @@ class PharmacyNotifier extends StateNotifier<PharmacyState> {
         auth: false,
       );
 
-      final data = response['data'] ?? response;
-      if (data is List) {
-        final medicines = data.map((m) => Medicine.fromJson(m)).toList();
-        state = state.copyWith(
-          medicineList: medicines,
-          isLoading: false,
-        );
-      } else {
-        state = state.copyWith(isLoading: false);
-      }
+      final data = ApiService.unwrapMap(response);
+      final list = data['medicines'] is List
+          ? data['medicines'] as List
+          : ApiService.unwrapList(response, listKey: 'medicines');
+      final medicines = list.map((m) => Medicine.fromJson(m)).toList();
+      state = state.copyWith(
+        medicineList: medicines,
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -98,37 +94,5 @@ class PharmacyNotifier extends StateNotifier<PharmacyState> {
 
   void addToCart() {
     state = state.copyWith(cartCounter: state.cartCounter + 1);
-  }
-
-  void _loadDummyData() {
-    state = state.copyWith(
-      medicineList: [
-        Medicine(
-          title: "Paracetamol 500mg",
-          category: "Pain Relief",
-          price: "\$5.99",
-        ),
-        Medicine(
-          title: "Amoxicillin 250mg",
-          category: "Antibiotic",
-          price: "\$12.99",
-        ),
-        Medicine(
-          title: "Ibuprofen 400mg",
-          category: "Anti-inflammatory",
-          price: "\$8.50",
-        ),
-        Medicine(
-          title: "Panadol Extra",
-          category: "Fever",
-          price: "\$3.20",
-        ),
-        Medicine(
-          title: "Vitamin C",
-          category: "Supplements",
-          price: "\$15.00",
-        ),
-      ],
-    );
   }
 }

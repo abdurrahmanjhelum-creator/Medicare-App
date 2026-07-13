@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
 import '../../../models/appointment_model.dart';
+import '../../video/screens/video_call_screen.dart';
 
 class WaitingCard extends StatefulWidget {
   final AppointmentModel appointment;
@@ -25,11 +26,11 @@ class _WaitingCardState extends State<WaitingCard> {
 
   void _calculateInitialSeconds() {
     try {
-      String startTimePart = widget.appointment.time.split('-').first.trim();
+      String startTimePart = widget.appointment.time.split(RegExp(r'[-–—]')).first.trim();
       DateFormat format;
       if (startTimePart.toUpperCase().contains('AM') ||
           startTimePart.toUpperCase().contains('PM')) {
-        format = DateFormat("hh:mm a");
+        format = DateFormat("h:mm a");
       } else {
         format = DateFormat("HH:mm");
       }
@@ -63,8 +64,21 @@ class _WaitingCardState extends State<WaitingCard> {
         }
       } else {
         _timer?.cancel();
+        _autoNavigateToCall();
       }
     });
+  }
+
+  void _autoNavigateToCall() {
+    if (mounted) {
+      // Requirement 5: Automatically allow entry into the Video Call Screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VideoCallScreen(appointment: widget.appointment),
+        ),
+      );
+    }
   }
 
   @override
@@ -73,7 +87,6 @@ class _WaitingCardState extends State<WaitingCard> {
     super.dispose();
   }
 
-  // Timer format: 0h 4m 3s
   String _formatFullTimer(int seconds) {
     if (seconds <= 0) return "0h 0m 0s";
     int hours = seconds ~/ 3600;
@@ -86,7 +99,6 @@ class _WaitingCardState extends State<WaitingCard> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 1. Time Card (White Card - Sirf Time show ho raha hai)
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
@@ -95,7 +107,7 @@ class _WaitingCardState extends State<WaitingCard> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withAlpha((0.03 * 255).round()),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
               ),
@@ -127,7 +139,7 @@ class _WaitingCardState extends State<WaitingCard> {
                   Text(
                     widget.appointment.time,
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0F172A),
                     ),
@@ -137,17 +149,12 @@ class _WaitingCardState extends State<WaitingCard> {
             ],
           ),
         ),
-
         const SizedBox(height: 20),
-
-        // 2. Countdown Timer Card (Light Green Container)
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
           decoration: BoxDecoration(
-            color: const Color(
-              0xFFE6F6F2,
-            ), // Light green background jaisa image mein hai
+            color: const Color(0xFFE6F6F2),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(

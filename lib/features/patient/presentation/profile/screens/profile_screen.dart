@@ -21,7 +21,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String _patientPhone = "";
   String _patientDob = "";
   String _patientAddress = "";
-  String _patientId = "12345678";
+  String _patientId = "";
   bool _isLoading = true;
 
   @override
@@ -38,27 +38,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         auth: true,
       );
 
-      final userData = response['data']?['user'] ?? response['user'];
-      final patientData = response['data']?['patient'] ?? response['patient'];
+      final data = ApiService.unwrapMap(response);
+      final userData = data['user'] as Map<String, dynamic>?;
+      final patientData = data['patient'] as Map<String, dynamic>?;
 
       // Fetch fallback values before setState
       final fallbackName = await TokenService.getUserName();
       final fallbackEmail = await TokenService.getUserEmail();
       final fallbackUserId = await TokenService.getUserId();
+      final fallbackPhone = await TokenService.getPhone();
 
       if (mounted) {
         setState(() {
           _patientName = userData?['name'] ?? fallbackName ?? "Patient";
           _patientEmail = userData?['email'] ?? fallbackEmail ?? "";
-          _patientPhone = userData?['phone'] ?? "";
-          _patientId = userData?['id'] ?? fallbackUserId ?? "12345678";
-          
-          // Format DOB from backend
+          _patientPhone = userData?['phone'] ?? fallbackPhone ?? "";
+          _patientId = userData?['id'] ?? fallbackUserId ?? "";
+
           if (patientData?['dob'] != null) {
-            final dob = DateTime.parse(patientData['dob']);
-            _patientDob = '${dob.year}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}';
+            try {
+              final dob = DateTime.parse(patientData!['dob'].toString());
+              _patientDob = '${dob.year}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}';
+            } catch (_) {
+              _patientDob = patientData!['dob'].toString();
+            }
           }
-          
+
           _patientAddress = patientData?['address'] ?? "Not provided";
           _isLoading = false;
         });
@@ -68,12 +73,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final name = await TokenService.getUserName();
       final email = await TokenService.getUserEmail();
       final userId = await TokenService.getUserId();
+      final phone = await TokenService.getPhone();
       
       if (mounted) {
         setState(() {
           _patientName = name ?? "Patient";
           _patientEmail = email ?? "";
-          _patientId = userId ?? "12345678";
+          _patientId = userId ?? "";
+          _patientPhone = phone ?? "";
           _isLoading = false;
         });
       }
@@ -99,7 +106,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ProfileHeader(
               name: _patientName,
               role: "Patient",
-              medicalId: "MED-$_patientId",
+              medicalId: _patientId.isNotEmpty ? "MED-$_patientId" : "Patient ID",
             ),
             const SizedBox(height: 20),
             Padding(
@@ -144,12 +151,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     title: "Logout",
                     textColor: AppColors.error,
                     iconColor: AppColors.error,
-                    onTap: () {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        AppRoutes.login,
-                        (route) => false,
-                      );
+                    onTap: () async {
+                      await TokenService.clearAll();
+                      if (context.mounted) {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          AppRoutes.login,
+                          (route) => false,
+                        );
+                      }
                     },
                   ),
                   const SizedBox(height: 30),

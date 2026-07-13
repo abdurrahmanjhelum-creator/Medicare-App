@@ -17,7 +17,9 @@ import '../../features/patient/presentation/reports/screens/reports_screen.dart'
 import '../../features/patient/presentation/emergency/screens/emergency_screen.dart';
 import '../../features/patient/presentation/doctors/screens/doctor_list_screen.dart';
 import '../../features/patient/presentation/doctors/screens/doctor_details_screen.dart';
+import '../../features/patient/presentation/doctors/screens/patient_chat_screen.dart';
 import '../../features/patient/presentation/profile/screens/change_password_screen.dart';
+import '../../features/patient/presentation/profile/screens/prescriptions_screen.dart';
 import '../../features/patient/presentation/appointments/screens/appointment_screen.dart';
 import '../../features/patient/models/doctor_model.dart';
 import '../../features/patient/presentation/book/screens/booking_screen.dart';
@@ -47,9 +49,11 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String notifications = '/notifications';
   static const String reports = '/reports';
+  static const String prescriptions = '/prescriptions';
   static const String emergency = '/emergency';
   static const String doctor = '/doctor';
   static const String doctorDetails = '/doctor-details';
+  static const String patientChat = '/patient-chat';
   static const String changePassword = '/change-password';
   static const String appointment = '/appointment';
   static const String bookingScreen = '/booking';
@@ -79,11 +83,19 @@ class AppRoutes {
     profile: (context) => const ProfileScreen(),
     notifications: (context) => const NotificationScreen(),
     reports: (context) => const LabReportsScreen(),
+    prescriptions: (context) => const PrescriptionsScreen(),
     emergency: (context) => const EmergencyScreen(),
     doctor: (context) => const DoctorScreen(),
     doctorDetails: (context) {
       final doctor = ModalRoute.of(context)!.settings.arguments as DoctorModel;
       return DoctorDetailsScreen(doctor: doctor);
+    },
+    patientChat: (context) {
+      final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      return PatientChatScreen(
+        doctorId: args['doctorId'],
+        doctorName: args['doctorName'],
+      );
     },
     changePassword: (context) => const NewPasswordScreen(),
     appointment: (context) => const AppointmentScreen(),

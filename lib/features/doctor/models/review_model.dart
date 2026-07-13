@@ -3,6 +3,7 @@ class DoctorReviewModel {
   final String id;
   final String patientId;
   final String patientName;
+  final String appointmentId;
   final int rating;
   final String comment;
   final String createdAt;
@@ -11,6 +12,7 @@ class DoctorReviewModel {
     required this.id,
     required this.patientId,
     required this.patientName,
+    required this.appointmentId,
     required this.rating,
     required this.comment,
     required this.createdAt,
@@ -22,6 +24,7 @@ class DoctorReviewModel {
       id: json['_id'] ?? json['id'] ?? '',
       patientId: json['patientId'] ?? '',
       patientName: json['patientName'] ?? '',
+      appointmentId: json['appointmentId'] ?? '',
       rating: json['rating'] ?? 0,
       comment: json['comment'] ?? '',
       createdAt: json['createdAt'] ?? '',
@@ -34,6 +37,7 @@ class DoctorReviewModel {
       'id': id,
       'patientId': patientId,
       'patientName': patientName,
+      'appointmentId': appointmentId,
       'rating': rating,
       'comment': comment,
       'createdAt': createdAt,

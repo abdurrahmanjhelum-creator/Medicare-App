@@ -10,44 +10,60 @@ class DoctorScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final doctorController = ref.watch(doctorProvider);
-
-    // Check if doctors list is empty (Simulating loading)
-    final bool isLoading = doctorController.allDoctors.isEmpty;
+    final doctorState = ref.watch(doctorProvider);
+    final notifier = ref.read(doctorProvider.notifier);
 
     return Scaffold(
       backgroundColor: const Color(0xffF6F7FB),
       body: Column(
         children: [
-          const DoctorListHeader(
+          DoctorListHeader(
             title: "Our Doctors",
-            hintText: "Search Doctors.",
-            shortText: "Find the best doctors..",
+            hintText: "Search Doctors...",
+            shortText: "Find the best doctors for your health.",
             showSearch: true,
-            firstColor: Color(0xff089B73),
-            secondColor: Color(0xff28C7C0),
+            onSearchChanged: (value) => notifier.filterDoctors(value),
+            firstColor: const Color(0xff089B73),
+            secondColor: const Color(0xff28C7C0),
             leading: null,
           ),
           const SizedBox(height: 10),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              physics: const BouncingScrollPhysics(),
-              children: [
-                if (isLoading)
-                  const ListSkeletonLoader(
-                    skeleton: DoctorCardSkeleton(),
-                    itemCount: 3,
-                    padding: EdgeInsets.zero,
-                  )
-                else
-                  ...doctorController.allDoctors.map(
+            child: RefreshIndicator(
+              onRefresh: () => notifier.fetchAllDoctors(),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                children: [
+                  if (doctorState.isLoading) ...List.generate(
+                    3,
+                    (index) => const Padding(
+                      padding: EdgeInsets.only(bottom: 10),
+                      child: DoctorCardSkeleton(),
+                    ),
+                  ) else if (doctorState.error != null && doctorState.allDoctors.isEmpty) ...[
+                    const SizedBox(height: 120),
+                    const Icon(Icons.wifi_off, size: 60, color: Colors.grey),
+                    const SizedBox(height: 12),
+                    Text('Error: ${doctorState.error}', style: const TextStyle(fontSize: 14, color: Colors.grey), textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () => notifier.fetchAllDoctors(),
+                      child: const Text('Retry'),
+                    ),
+                  ] else if (doctorState.filteredDoctors.isEmpty) ...[
+                    const SizedBox(height: 120),
+                    const Center(
+                      child: Text('No doctors found', style: TextStyle(color: Colors.grey)),
+                    ),
+                  ] else ...doctorState.filteredDoctors.map(
                     (doctor) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: DoctorCardWidget(doctor: doctor),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

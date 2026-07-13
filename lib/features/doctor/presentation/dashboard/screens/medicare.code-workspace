@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../.."
+		},
+		{
+			"path": "../../../../../../../medicare-backend"
+		}
+	],
+	"settings": {
+		"deepseek-copilot.maxTokens": 1
+	}
+}

@@ -89,6 +89,29 @@ class AppointmentCard extends StatelessWidget {
           const SizedBox(height: 20),
           GestureDetector(
             onTap: () {
+              // Requirement 10: Prevent joining cancelled, expired, or completed appointments
+              final status = appointment.status.toLowerCase();
+              if (status == 'cancelled' || status == 'completed') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Cannot join ${appointment.status} appointment'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              // Only allow video call for confirmed appointments
+              if (status != 'confirmed' && status != 'upcoming') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please wait for the doctor to confirm your appointment'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return;
+              }
+
               final now = DateTime.now();
               DateTime startTime;
               DateTime endTime;

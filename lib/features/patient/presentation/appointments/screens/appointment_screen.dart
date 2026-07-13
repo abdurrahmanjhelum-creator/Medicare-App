@@ -120,11 +120,21 @@ class _AppointmentScreenState extends ConsumerState<AppointmentScreen> {
               physics: const BouncingScrollPhysics(),
               children: [
                 if (appointmentState.selectedTab == 0) ...[
-                  if (appointmentState.upcomingAppointments.isEmpty)
+                  if (appointmentState.isLoading)
                     const ListSkeletonLoader(
                       skeleton: AppointmentCardSkeleton(),
                       itemCount: 2,
                       padding: EdgeInsets.zero,
+                    )
+                  else if (appointmentState.upcomingAppointments.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Text(
+                          'Koi upcoming appointment nahi hai',
+                          style: TextStyle(color: Colors.grey, fontSize: 15),
+                        ),
+                      ),
                     )
                   else
                     ...appointmentState.upcomingAppointments.map(
@@ -132,11 +142,21 @@ class _AppointmentScreenState extends ConsumerState<AppointmentScreen> {
                     ),
                 ],
                 if (appointmentState.selectedTab == 1) ...[
-                  if (appointmentState.completedAppointments.isEmpty)
+                  if (appointmentState.isLoading)
                     const ListSkeletonLoader(
                       skeleton: AppointmentCardSkeleton(),
                       itemCount: 2,
                       padding: EdgeInsets.zero,
+                    )
+                  else if (appointmentState.completedAppointments.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Text(
+                          'Koi completed appointment nahi hai',
+                          style: TextStyle(color: Colors.grey, fontSize: 15),
+                        ),
+                      ),
                     )
                   else
                     ...appointmentState.completedAppointments.map(

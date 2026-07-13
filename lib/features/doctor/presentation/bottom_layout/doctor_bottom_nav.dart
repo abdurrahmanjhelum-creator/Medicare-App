@@ -1,10 +1,12 @@
 // Doctor Bottom Navigation - Doctor bottom navigation bar
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../../core/constants/app_colors.dart';
-import '../../../../../../core/constants/app_dimensions.dart';
-import '../../../../../../core/routes/app_routes.dart';
-import '../../../../../../core/services/token_service.dart';
+import 'package:medicare/core/constants/app_colors.dart';
+import 'package:medicare/core/constants/app_dimensions.dart';
+import 'package:medicare/core/routes/app_routes.dart';
+import 'package:medicare/core/services/token_service.dart';
+import 'package:medicare/core/widgets/common/appointment_time_checker.dart';
+import 'package:medicare/features/doctor/controllers/appointment_controller.dart';
 import '../dashboard/screens/doctor_dashboard_screen.dart';
 import '../appointments/screens/doctor_appointments_screen.dart';
 import '../patients/screens/doctor_patients_screen.dart';
@@ -44,8 +46,18 @@ class _DoctorBottomNavState extends ConsumerState<DoctorBottomNav> {
 
   @override
   Widget build(BuildContext context) {
+    // Confirmed appointments for appointment-time popups (no extra API call).
+    final upcomingAppointments = ref.watch(upcomingAppointmentsProvider);
+    final upcomingList =
+        upcomingAppointments.map((a) => a.toAppointmentModel()).toList();
+
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: Stack(
+        children: [
+          _screens[_currentIndex],
+          AppointmentTimeChecker(appointments: upcomingList),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.white,

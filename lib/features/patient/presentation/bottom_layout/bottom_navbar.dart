@@ -24,25 +24,23 @@ class MainLayout extends ConsumerStatefulWidget {
 
 class MainLayoutState extends ConsumerState<MainLayout> {
   late int currentIndex;
+  bool _isAuthorized = false;
 
-  // Check role on init and redirect if not a patient
   @override
   void initState() {
     super.initState();
     currentIndex = widget.initialIndex;
-    // Delay role check to after build
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final role = await TokenService.getUserRole();
-        if (role != null && role != 'patient' && mounted) {
-          if (context.mounted) {
-            Navigator.pushReplacementNamed(context, AppRoutes.doctorMainLayout);
-          }
-        }
-      } catch (_) {}
-    });
+    _checkAuth();
   }
 
+  Future<void> _checkAuth() async {
+    final role = await TokenService.getUserRole();
+    if (role != null && role != 'patient' && mounted) {
+      Navigator.pushReplacementNamed(context, AppRoutes.doctorMainLayout);
+    } else {
+      if (mounted) setState(() => _isAuthorized = true);
+    }
+  }
 
   void setIndex(int index) {
     setState(() {
@@ -59,15 +57,18 @@ class MainLayoutState extends ConsumerState<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final upcomingAppointments = ref
-        .watch(appointmentProvider)
-        .upcomingAppointments;
+    if (!_isAuthorized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // Only watch this if we are confirmed as a patient
+    final appointmentState = ref.watch(appointmentProvider);
+    final upcomingAppointments = appointmentState.upcomingAppointments;
 
     return Scaffold(
       body: Stack(
         children: [
           IndexedStack(index: currentIndex, children: pages),
-          // Time checker - Sirf Appointment screen (index 2) par chalega
           if (currentIndex == 2)
             AppointmentTimeChecker(appointments: upcomingAppointments),
         ],

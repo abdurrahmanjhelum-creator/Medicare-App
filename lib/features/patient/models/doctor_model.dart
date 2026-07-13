@@ -1,6 +1,8 @@
 import 'review_model.dart';
 
 class DoctorModel {
+  final String id;
+  final String userId;
   final String image;
   final String name;
   final String specialization;
@@ -18,6 +20,8 @@ class DoctorModel {
   final List<String> availableSlots;
 
   const DoctorModel({
+    required this.id,
+    required this.userId,
     required this.image,
     required this.name,
     required this.pmdcLicenceNumber,
@@ -37,16 +41,18 @@ class DoctorModel {
 
   factory DoctorModel.fromJson(Map<String, dynamic> json) {
     return DoctorModel(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      userId: json['userId']?.toString() ?? json['_id']?.toString() ?? '',
       image: json['profileImage'] ?? json['image'] ?? '',
       name: json['name'] ?? '',
       pmdcLicenceNumber: json['pmdcLicenceNumber'] ?? '',
       specialization: json['specialization'] ?? '',
       rating: json['rating']?.toString() ?? '0.0',
-      reviews: json['reviews']?.toString() ?? '0',
+      reviews: json['totalReviews']?.toString() ?? json['reviews']?.toString() ?? '0',
       doctorFee: (json['fee'] ?? json['doctorFee'] ?? 0).toDouble(),
       experience: json['experience']?.toString() ?? '0 Years',
-      branch: json['clinic'] ?? json['branch'] ?? '',
-      availability: json['availability'] ?? 'Not Available',
+      branch: json['clinic'] ?? json['clinicAddress'] ?? json['branch'] ?? '',
+      availability: json['availability'] ?? 'Available Today',
       bio: json['bio'] ?? '',
       qualification: json['qualification'] ?? '',
       reviewsList: json['reviewsList'] != null 

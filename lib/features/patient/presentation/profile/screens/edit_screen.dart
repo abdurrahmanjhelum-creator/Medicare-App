@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:medicare/core/widgets/common/header.dart';
 import 'package:medicare/core/widgets/common/profile_image.dart';
 import 'package:medicare/core/widgets/form/full_name_field.dart';
@@ -34,14 +33,22 @@ class _EditScreenState extends State<EditScreen> {
   Future<void> _loadInitial() async {
     try {
       final resp = await ApiService.get(endpoint: '/patient-dashboard/profile', auth: true);
-      final data = resp['data'] as Map<String, dynamic>?;
-      final user = data?['user'] as Map<String, dynamic>?;
-      final patient = data?['patient'] as Map<String, dynamic>?;
+      final data = ApiService.unwrapMap(resp);
+      final user = data['user'] as Map<String, dynamic>?;
+      final patient = data['patient'] as Map<String, dynamic>?;
 
       _nameController.text = user?['name'] ?? '';
       _emailController.text = user?['email'] ?? '';
       _phoneController.text = user?['phone'] ?? '';
-      _dobController.text = patient?['dob'] ?? '';
+      
+      if (patient?['dob'] != null) {
+        try {
+          final dob = DateTime.parse(patient!['dob'].toString());
+          _dobController.text = '${dob.year}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}';
+        } catch (_) {
+          _dobController.text = patient!['dob'].toString();
+        }
+      }
       setState(() {});
     } catch (_) {}
   }
@@ -83,7 +90,12 @@ class _EditScreenState extends State<EditScreen> {
                   size: 110,
                   isEditable: true,
                   onEdit: () {
-                    // TODO: Implement image picker logic
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Image picker feature coming soon'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(height: 12),
@@ -136,30 +148,42 @@ class _EditScreenState extends State<EditScreen> {
     try {
       final body = {
         'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
         'phone': _phoneController.text.trim(),
         'dob': _dobController.text.trim(),
       };
 
-      await ApiService.put(endpoint: '/patients/profile', body: body, auth: true);
-
-      // Show confirmation dialog
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Profile Updated'),
-          content: const Text('Your profile edited'),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
-          ],
-        ),
+      await ApiService.put(
+        endpoint: '/patient-dashboard/profile',
+        body: body,
+        auth: true,
       );
 
-      Navigator.of(context).pop(true);
+      if (mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Profile Updated'),
+            content: const Text('Your profile has been updated successfully'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+            ],
+          ),
+        );
+
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
     } finally {
-      setState(() => _saving = false);
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 }

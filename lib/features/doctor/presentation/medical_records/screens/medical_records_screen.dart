@@ -130,19 +130,22 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (diagnosisController.text.isNotEmpty) {
-                ref.read(medicalRecordProvider.notifier).createMedicalRecord({
+                final success = await ref.read(medicalRecordProvider.notifier).createMedicalRecord({
                   'patientId': widget.patientId,
-                  'patientName': widget.patientName,
-                  'doctorId': 'current_doctor_id',
-                  'doctorName': 'Dr. Smith',
                   'diagnosis': diagnosisController.text,
                   'prescription': prescriptionController.text,
                   'notes': notesController.text,
-                  'attachments': [],
                 });
-                Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  if (!success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(ref.read(medicalRecordProvider).error ?? 'Failed to save record')),
+                    );
+                  }
+                }
               }
             },
             child: const Text('Save'),

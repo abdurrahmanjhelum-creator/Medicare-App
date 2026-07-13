@@ -1,28 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:medicare/core/constants/app_colors.dart';
 import 'package:medicare/core/providers/providers.dart';
 import 'package:medicare/core/widgets/common/header.dart';
 import 'package:medicare/core/widgets/common/back_button.dart';
 import 'package:medicare/core/widgets/form/password_field.dart';
 import 'package:medicare/core/widgets/form/login_button.dart';
 
-class NewPasswordScreen extends ConsumerWidget {
+class NewPasswordScreen extends ConsumerStatefulWidget {
   const NewPasswordScreen({super.key});
 
-  void _showError(BuildContext context, String message) {
+  @override
+  ConsumerState<NewPasswordScreen> createState() => _NewPasswordScreenState();
+}
+
+class _NewPasswordScreenState extends ConsumerState<NewPasswordScreen> {
+  @override
+  void dispose() {
+    ref.read(changePasswordProvider.notifier).disposeControllers();
+    super.dispose();
+  }
+
+  void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: AppColors.error),
     );
   }
 
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppColors.success),
+    );
+  }
+
+  Future<void> _onSave() async {
+    final success = await ref.read(changePasswordProvider.notifier).changePassword();
+    
+    if (!mounted) return;
+
+    if (success) {
+      _showSuccess('Password changed successfully');
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } else {
+      final error = ref.read(changePasswordProvider).error;
+      final errorMessage = error?.contains('Exception:') == true
+          ? error!.replaceAll('Exception: ', '')
+          : error ?? 'Failed to change password';
+      _showError('Error: $errorMessage');
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // FIX: Must watch the provider to prevent it from disposing while the screen is active
-    ref.watch(changePasswordProvider);
+  Widget build(BuildContext context) {
+    final changePasswordState = ref.watch(changePasswordProvider);
     final notifier = ref.read(changePasswordProvider.notifier);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: AppColors.scaffoldBackground,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -34,8 +71,6 @@ class NewPasswordScreen extends ConsumerWidget {
                 onTap: () => Navigator.pop(context),
                 text: "Back",
               ),
-              firstColor: const Color(0xff089B73),
-              secondColor: const Color(0xff28C7C0),
             ),
             const SizedBox(height: 30),
             Padding(
@@ -43,35 +78,28 @@ class NewPasswordScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   PasswordTextField(
-                    controller: notifier.passwordController,
-                    label: "Password",
-                    hintText: "Enter your password",
+                    controller: notifier.currentPasswordController,
+                    label: "Current Password",
+                    hintText: "Enter your current password",
+                  ),
+                  const SizedBox(height: 20),
+                  PasswordTextField(
+                    controller: notifier.newPasswordController,
+                    label: "New Password",
+                    hintText: "Enter your new password",
                   ),
                   const SizedBox(height: 20),
                   PasswordTextField(
                     controller: notifier.confirmPasswordController,
                     label: "Confirm Password",
-                    hintText: "Confirm your password",
+                    hintText: "Confirm your new password",
                   ),
                   const SizedBox(height: 40),
                   LoginButton(
                     height: 55,
                     width: double.infinity,
-                    text: "Save Changes",
-                    onTap: () {
-                      final error = notifier.validate();
-                      if (error != null) {
-                        _showError(context, error);
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Password Updated Successfully"),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                      Navigator.pop(context);
-                    },
+                    text: changePasswordState.isLoading ? "Updating..." : "Save Changes",
+                    onTap: changePasswordState.isLoading ? () {} : _onSave,
                   ),
                   const SizedBox(height: 40),
                 ],

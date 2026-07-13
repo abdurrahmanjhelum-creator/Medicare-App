@@ -34,17 +34,29 @@ class DoctorInfoCard extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                doctor.image,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 30,
-                  );
-                },
-              ),
+              child: doctor.image.startsWith('http')
+                  ? Image.network(
+                      doctor.image,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 30,
+                        );
+                      },
+                    )
+                  : Image.asset(
+                      doctor.image.isNotEmpty ? doctor.image : 'assets/images/default_doctor.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 30,
+                        );
+                      },
+                    ),
             ),
           ),
           const SizedBox(width: 15),

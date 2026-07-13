@@ -13,6 +13,7 @@ class TokenService {
   static const String _userRoleKey = 'user_role';
   static const String _userNameKey = 'user_name';
   static const String _userEmailKey = 'user_email';
+  static const String _phoneKey = 'phone';
 
   // ---- Token save karo (login ke baad) ----
   static Future<void> saveToken(String token) async {
@@ -32,12 +33,16 @@ class TokenService {
     required String role,
     required String name,
     required String email,
+    String? phone,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userIdKey, id);       // User ID
     await prefs.setString(_userRoleKey, role);   // Role: patient/doctor
     await prefs.setString(_userNameKey, name);   // Display name
     await prefs.setString(_userEmailKey, email); // Email
+    if (phone != null) {
+      await prefs.setString(_phoneKey, phone);
+    }
   }
 
   // ---- User ID nikalo ----
@@ -64,6 +69,12 @@ class TokenService {
     return prefs.getString(_userEmailKey);
   }
 
+  // ---- User phone nikalo ----
+  static Future<String?> getPhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_phoneKey);
+  }
+
   // ---- Poori info ek Map mein nikalo ----
   static Future<Map<String, String?>> getUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
@@ -72,6 +83,7 @@ class TokenService {
       'role': prefs.getString(_userRoleKey),
       'name': prefs.getString(_userNameKey),
       'email': prefs.getString(_userEmailKey),
+      'phone': prefs.getString(_phoneKey),
     };
   }
 
@@ -84,10 +96,6 @@ class TokenService {
   // ---- Logout — sab data clear karo ----
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);    // Token delete karo
-    await prefs.remove(_userIdKey);   // User ID delete karo
-    await prefs.remove(_userRoleKey); // Role delete karo
-    await prefs.remove(_userNameKey); // Name delete karo
-    await prefs.remove(_userEmailKey);// Email delete karo
+    await prefs.clear();
   }
 }

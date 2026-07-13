@@ -31,12 +31,17 @@ class EarningsChart extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: earningsData.map((data) {
-          final height = (data.amount / maxAmount) * 100;
+          // Fix: Avoid division by zero which results in NaN
+          final double height = (maxAmount > 0) 
+              ? (data.amount / maxAmount) * 100 
+              : 0;
+              
           return Column(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Container(
                 width: 30,
-                height: height,
+                height: height.isNaN ? 0 : height,
                 decoration: BoxDecoration(
                   color: AppColors.primaryGreen,
                   borderRadius: BorderRadius.circular(AppDimensions.borderRadius8),
