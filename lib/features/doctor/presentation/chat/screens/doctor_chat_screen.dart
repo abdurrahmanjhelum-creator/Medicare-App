@@ -1,9 +1,12 @@
-// Doctor Chat Screen - Doctor chat screen
+// Doctor Chat Screen - Real-time chat with patients via backend API
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../../core/constants/app_colors.dart';
 import '../../../../../../core/constants/app_dimensions.dart';
+import '../../../../../../core/services/token_service.dart';
+import '../../../controllers/chat_controller.dart';
 
-class DoctorChatScreen extends StatefulWidget {
+class DoctorChatScreen extends ConsumerStatefulWidget {
   final String patientId;
   final String patientName;
 
@@ -14,26 +17,60 @@ class DoctorChatScreen extends StatefulWidget {
   });
 
   @override
-  State<DoctorChatScreen> createState() => _DoctorChatScreenState();
+  ConsumerState<DoctorChatScreen> createState() => _DoctorChatScreenState();
 }
 
-class _DoctorChatScreenState extends State<DoctorChatScreen> {
+class _DoctorChatScreenState extends ConsumerState<DoctorChatScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      message: 'Hello doctor, I have a question about my prescription.',
-      isSentByMe: false,
-      time: '10:30 AM',
-    ),
-    ChatMessage(
-      message: 'Sure, what would you like to know?',
-      isSentByMe: true,
-      time: '10:32 AM',
-    ),
-  ];
+  final ScrollController _scrollController = ScrollController();
+  String? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_initChat);
+  }
+
+  Future<void> _initChat() async {
+    _currentUserId = await TokenService.getUserId();
+    if (_currentUserId != null && mounted) {
+      await ref.read(doctorChatProvider.notifier).loadMessages(widget.patientId, _currentUserId!);
+      _scrollToBottom();
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    _messageController.clear();
+    await ref.read(doctorChatProvider.notifier).sendMessage(widget.patientId, text);
+    _scrollToBottom();
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final chatState = ref.watch(doctorChatProvider);
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
@@ -49,23 +86,48 @@ class _DoctorChatScreenState extends State<DoctorChatScreen> {
       ),
       body: Column(
         children: [
-          // Messages list
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(AppDimensions.spacing16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _MessageBubble(
-                  message: message.message,
-                  isSentByMe: message.isSentByMe,
-                  time: message.time,
-                );
-              },
-            ),
+            child: chatState.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : chatState.error != null && chatState.messages.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              chatState.error!,
+                              style: const TextStyle(color: AppColors.errorRed),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _initChat,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : chatState.messages.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No messages yet. Start the conversation.',
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(AppDimensions.spacing16),
+                            itemCount: chatState.messages.length,
+                            itemBuilder: (context, index) {
+                              final message = chatState.messages[index];
+                              return _MessageBubble(
+                                message: message.content,
+                                isSentByMe: message.isSentByMe,
+                                time: message.formattedTime,
+                              );
+                            },
+                          ),
           ),
-          
-          // Message input
           Container(
             padding: const EdgeInsets.all(AppDimensions.spacing16),
             decoration: BoxDecoration(
@@ -85,9 +147,7 @@ class _DoctorChatScreenState extends State<DoctorChatScreen> {
                     controller: _messageController,
                     decoration: InputDecoration(
                       hintText: 'Type a message...',
-                      hintStyle: const TextStyle(
-                        color: AppColors.textSecondary,
-                      ),
+                      hintStyle: const TextStyle(color: AppColors.textSecondary),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppDimensions.borderRadius24),
                         borderSide: BorderSide.none,
@@ -99,31 +159,27 @@ class _DoctorChatScreenState extends State<DoctorChatScreen> {
                         vertical: AppDimensions.spacing12,
                       ),
                     ),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 const SizedBox(width: AppDimensions.spacing12),
                 Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.primaryGreen,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: const Icon(
-                      Icons.send,
-                      color: AppColors.white,
-                    ),
-                    onPressed: () {
-                      if (_messageController.text.isNotEmpty) {
-                        setState(() {
-                          _messages.add(ChatMessage(
-                            message: _messageController.text,
-                            isSentByMe: true,
-                            time: DateTime.now().toString().substring(11, 16),
-                          ));
-                          _messageController.clear();
-                        });
-                      }
-                    },
+                    icon: chatState.isSending
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: AppColors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.send, color: AppColors.white),
+                    onPressed: chatState.isSending ? null : _sendMessage,
                   ),
                 ),
               ],
@@ -133,18 +189,6 @@ class _DoctorChatScreenState extends State<DoctorChatScreen> {
       ),
     );
   }
-}
-
-class ChatMessage {
-  final String message;
-  final bool isSentByMe;
-  final String time;
-
-  ChatMessage({
-    required this.message,
-    required this.isSentByMe,
-    required this.time,
-  });
 }
 
 class _MessageBubble extends StatelessWidget {
@@ -176,9 +220,7 @@ class _MessageBubble extends StatelessWidget {
             ),
           ],
         ),
-        constraints: const BoxConstraints(
-          maxWidth: 280,
-        ),
+        constraints: const BoxConstraints(maxWidth: 280),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -193,7 +235,9 @@ class _MessageBubble extends StatelessWidget {
             Text(
               time,
               style: TextStyle(
-                color: isSentByMe ? AppColors.white.withAlpha((0.7 * 255).round()) : AppColors.textSecondary,
+                color: isSentByMe
+                    ? AppColors.white.withAlpha((0.7 * 255).round())
+                    : AppColors.textSecondary,
                 fontSize: 12,
               ),
             ),

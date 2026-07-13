@@ -16,6 +16,24 @@ class EmergencyContactModel {
     required this.iconBackgroundColor,
   });
 
+  static Color _parseColor(dynamic colorValue, Color fallback) {
+    if (colorValue == null) return fallback;
+    try {
+      String colorStr = colorValue.toString().trim().replaceAll('#', '');
+      if (colorStr.toLowerCase().startsWith('0x')) {
+        colorStr = colorStr.substring(2);
+      }
+      
+      if (colorStr.length == 6) {
+        colorStr = 'FF$colorStr';
+      }
+      
+      return Color(int.parse(colorStr, radix: 16));
+    } catch (e) {
+      return fallback;
+    }
+  }
+
   factory EmergencyContactModel.fromJson(Map<String, dynamic> json) {
     // Map icon string to IconData
     IconData getIcon(String iconName) {
@@ -40,8 +58,8 @@ class EmergencyContactModel {
       title: json['title'] ?? '',
       subtitle: json['subtitle'] ?? '',
       icon: getIcon(json['icon'] ?? 'phone'),
-      iconColor: Color(int.parse(json['iconColor']?.toString().replaceAll('0xFF', '0xff') ?? '0xff0FA485')),
-      iconBackgroundColor: Color(int.parse(json['iconBackgroundColor']?.toString().replaceAll('0xFF', '0xff') ?? '0xffE0F2F1')),
+      iconColor: _parseColor(json['iconColor'], const Color(0xFF0FA485)),
+      iconBackgroundColor: _parseColor(json['iconBackgroundColor'], const Color(0xFFE0F2F1)),
     );
   }
 }

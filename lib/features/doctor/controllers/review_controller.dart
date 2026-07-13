@@ -47,21 +47,32 @@ class DoctorReviewNotifier extends StateNotifier<DoctorReviewState> {
         auth: true,
       );
 
-      final doctorId = (profileResp['data'] as Map<String, dynamic>)['doctor']?['id'];
-      if (doctorId == null) throw Exception('Doctor ID not found');
+      final profileData = ApiService.unwrapMap(profileResp);
+      
+      // Handle both { data: { doctor: { _id: ... } } } and { doctor: { _id: ... } }
+      final doctor = profileData['doctor'] as Map<String, dynamic>?;
+      
+      if (doctor == null) {
+        throw Exception('Doctor profile not found. Please complete your profile.');
+      }
 
-      // Fetch reviews for this doctor
+      final doctorId = doctor['id']?.toString() ?? doctor['_id']?.toString();
+      
+      if (doctorId == null || doctorId.isEmpty) {
+        throw Exception('Doctor ID not found in profile.');
+      }
+
       final resp = await ApiService.get(
         endpoint: '/reviews/doctor/$doctorId',
         auth: false,
       );
 
-      // Backend returns { reviews, pagination, averageRating, totalReviews }
-      final reviewsList = (resp['reviews'] as List)
+      final data = ApiService.unwrapMap(resp);
+      final reviewsList = ApiService.unwrapList(resp, listKey: 'reviews')
           .map((e) => DoctorReviewModel.fromJson(e as Map<String, dynamic>))
           .toList();
 
-      final avgRating = (resp['averageRating'] ?? 0).toDouble();
+      final avgRating = (data['averageRating'] ?? 0).toDouble();
 
       state = state.copyWith(
         isLoading: false,
@@ -69,40 +80,12 @@ class DoctorReviewNotifier extends StateNotifier<DoctorReviewState> {
         averageRating: avgRating,
       );
     } catch (e) {
-      // If API fails or no reviews, show empty list (no dummy data)
       state = state.copyWith(
         isLoading: false,
         reviews: [],
         averageRating: 0.0,
-        error: null,
+        error: e.toString().replaceAll('Exception: ', ''),
       );
-    }
-  }
-
-  // Review delete karein
-  Future<void> deleteReview(String reviewId) async {
-    try {
-      // API call karein
-      await ApiService.delete(
-        endpoint: '/reviews/$reviewId',
-        auth: true,
-      );
-      
-      final updatedReviews =
-          state.reviews.where((review) => review.id != reviewId).toList();
-      
-      // Recalculate average rating
-      final avgRating = updatedReviews.isEmpty
-          ? 0.0
-          : updatedReviews.map((r) => r.rating).reduce((a, b) => a + b) /
-              updatedReviews.length;
-      
-      state = state.copyWith(
-        reviews: updatedReviews,
-        averageRating: avgRating,
-      );
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
     }
   }
 }

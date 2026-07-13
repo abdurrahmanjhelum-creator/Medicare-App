@@ -4,7 +4,6 @@ import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/providers/providers.dart';
 import '../../../../../core/widgets/common/success_dialog.dart';
 import '../../../models/doctor_model.dart';
-import '../../../models/appointment_model.dart';
 import '../widgets/header.dart';
 import '../widgets/bottom_confirm_button.dart';
 import '../widgets/doctor_info_card.dart';
@@ -16,12 +15,14 @@ import 'recipt_screen.dart';
 class PaymentScreen extends ConsumerStatefulWidget {
   final DoctorModel doctor;
   final String selectedTime;
+  final DateTime selectedDate;
   final String notes;
 
   const PaymentScreen({
     super.key,
     required this.doctor,
     required this.selectedTime,
+    required this.selectedDate,
     required this.notes,
   });
 
@@ -31,43 +32,69 @@ class PaymentScreen extends ConsumerStatefulWidget {
 
 class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   PaymentMethod _selectedMethod = PaymentMethod.card;
+  bool _isProcessing = false;
 
-  void _handlePayment() {
-    final newAppointment = AppointmentModel(
-      doctorimage: widget.doctor.image,
-      doctorName: widget.doctor.name,
-      specialization: widget.doctor.specialization,
-      time: widget.selectedTime,
-      type: "Video Call",
-      location: "Online",
-      status: "Upcoming",
-      patientNotes: widget.notes,
-    );
+  void _handlePayment() async {
+    setState(() {
+      _isProcessing = true;
+    });
 
-    ref.read(appointmentProvider.notifier).addAppointment(newAppointment);
+    // Prepare booking data for backend
+    final bookingData = {
+      'doctorId': widget.doctor.userId,
+      'date': widget.selectedDate.toIso8601String().split('T')[0], // Use selected date
+      'time': widget.selectedTime,
+      'type': 'consultation',
+      'patientNotes': widget.notes,
+    };
 
-    SuccessDialog.show(
-      context: context,
-      icon: Icons.check_circle,
-      title: "Appointment Confirmed",
-      subtitle: "Your appointment and payment have been successful!",
-      onPressed: () {
-        Navigator.pop(context); // Close dialog
+    // Call backend API to book appointment
+    final success = await ref.read(appointmentProvider.notifier).bookAppointment(bookingData);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ReceiptScreen(
-              doctorName: widget.doctor.name,
-              specialization: widget.doctor.specialization,
-              time: widget.selectedTime,
-              fee: "\$${widget.doctor.doctorFee}",
-              paymentMethod: _selectedMethod.name.toUpperCase(),
+    setState(() {
+      _isProcessing = false;
+    });
+
+    if (success) {
+      SuccessDialog.show(
+        context: context,
+        icon: Icons.check_circle,
+        title: "Appointment Confirmed",
+        subtitle: "Your appointment and payment have been successful!",
+        onPressed: () {
+          Navigator.pop(context); // Close dialog
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ReceiptScreen(
+                doctorName: widget.doctor.name,
+                specialization: widget.doctor.specialization,
+                time: widget.selectedTime,
+                fee: "\$${widget.doctor.doctorFee}",
+                paymentMethod: _selectedMethod.name.toUpperCase(),
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    } else {
+      // Get the error message from provider
+      final error = ref.read(appointmentProvider).error ?? 'Booking failed';
+      String displayError = error.replaceAll('Exception: ', '');
+      
+      // If doctor is not available, show clear message
+      if (displayError.toLowerCase().contains('not available')) {
+        displayError = 'Doctor is not available today. Please choose another day.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(displayError),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -107,7 +134,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomBookButton(onTap: _handlePayment),
+      bottomNavigationBar: BottomBookButton(
+        onTap: _isProcessing ? () {} : _handlePayment,
+      ),
     );
   }
 }

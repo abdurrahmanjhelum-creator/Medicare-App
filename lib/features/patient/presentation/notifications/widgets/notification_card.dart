@@ -1,103 +1,110 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/constants/app_colors.dart';
+import '../../../models/notification_model.dart';
 
 class NotificationCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String time;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBgColor;
-  final bool isRead;
+  final NotificationModel notification;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   const NotificationCard({
     super.key,
-    required this.title,
-    required this.subtitle,
-    required this.time,
-    required this.icon,
-    this.iconColor = const Color(0xff089B73),
-    this.iconBgColor = const Color(0xFFE0F2F1),
-    this.isRead = false,
+    required this.notification,
+    required this.onTap,
+    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
+        border: notification.isRead
+            ? null
+            : Border.all(
+                color: AppColors.primaryGreen.withValues(alpha: 0.2),
+                width: 1,
+              ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Icon Container
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(icon, color: iconColor, size: 26),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: notification.iconBgColor,
+            borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(width: 16),
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0A0E21),
-                      ),
-                    ),
-                    if (!isRead)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xff089B73),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
+          child: Icon(notification.icon, color: notification.iconColor, size: 20),
+        ),
+        title: Text(
+          notification.title,
+          style: TextStyle(
+            fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              notification.subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              notification.time,
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!notification.isRead)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryGreen,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    height: 1.3,
+              ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 20, color: AppColors.textSecondary),
+              onSelected: (value) {
+                if (value == 'delete') {
+                  onDelete();
+                } else if (value == 'read') {
+                  onTap();
+                }
+              },
+              itemBuilder: (context) => [
+                if (!notification.isRead)
+                  const PopupMenuItem(
+                    value: 'read',
+                    child: Text('Mark as read'),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  time,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                    fontWeight: FontWeight.w500,
-                  ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete'),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
+        onTap: !notification.isRead ? onTap : null,
       ),
     );
   }

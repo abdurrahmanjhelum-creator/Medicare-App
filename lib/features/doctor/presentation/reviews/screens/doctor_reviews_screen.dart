@@ -116,12 +116,7 @@ class _DoctorReviewsScreenState extends ConsumerState<DoctorReviewsScreen> {
                             itemCount: reviewState.reviews.length,
                             itemBuilder: (context, index) {
                               final review = reviewState.reviews[index];
-                              return ReviewCard(
-                                review: review,
-                                onDelete: () {
-                                  ref.read(doctorReviewProvider.notifier).deleteReview(review.id);
-                                },
-                              );
+                              return ReviewCard(review: review);
                             },
                           ),
           ),

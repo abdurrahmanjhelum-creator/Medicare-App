@@ -50,56 +50,73 @@ class TimeSelectionWidget extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 16),
 
-          GridView.builder(
-            shrinkWrap:
-                true, // Column ke andar GridView chalane ke liye zaroori hai
-            physics:
-                const NeverScrollableScrollPhysics(), // Scroll Column karega, Grid nahi
-            itemCount: timeSlots.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, // Ek row mein 3 slots
-              childAspectRatio:
-                  1.8, // Box ki shape (width aur height ka balance)
-              crossAxisSpacing: 15, // Horizontal gap
-              mainAxisSpacing: 30, // Vertical gap
-            ),
-            itemBuilder: (context, index) {
-              final time = timeSlots[index];
-              final isSelected = selectedTime == time;
+          // Empty state
+          if (timeSlots.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  children: [
+                    Icon(Icons.schedule, size: 40, color: Colors.grey.shade400),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Is doctor ne abhi koi time slot set nahi kiya.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: timeSlots.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 1.8,
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 12,
+              ),
+              itemBuilder: (context, index) {
+                final time = timeSlots[index];
+                final isSelected = selectedTime == time;
 
-              return InkWell(
-                onTap: () => onTimeSelected(time),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primaryGreen
-                        : AppColors.scaffoldBackground,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
+                return InkWell(
+                  onTap: () => onTimeSelected(time),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primaryGreen
-                          : AppColors.border,
+                          : AppColors.scaffoldBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primaryGreen
+                            : AppColors.border,
+                      ),
+                    ),
+                    child: Text(
+                      time,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isSelected
+                            ? AppColors.white
+                            : AppColors.textPrimary,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                      ),
                     ),
                   ),
-                  child: Text(
-                    time,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isSelected
-                          ? AppColors.white
-                          : AppColors.textPrimary,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w500,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
         ],
       ),
     );

@@ -33,7 +33,7 @@ class DoctorNotificationModel {
       type: json['type'] ?? '',
       icon: json['icon'] ?? '',
       iconColor: json['iconColor'] ?? '',
-      backgroundColor: json['backgroundColor'] ?? '',
+      backgroundColor: json['iconBackgroundColor'] ?? json['backgroundColor'] ?? '#F3F4F6',
       isRead: json['isRead'] ?? false,
       relatedId: json['relatedId'],
       createdAt: json['createdAt'] ?? '',

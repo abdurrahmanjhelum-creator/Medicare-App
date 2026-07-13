@@ -41,8 +41,8 @@ class WaitingInfoCard extends StatelessWidget {
                     "Date",
                     style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
                   ),
-                  const Text(
-                    "Monday, June 15, 2026", // Mock date as it's missing in model
+                  Text(
+                    appointment.date ?? 'Date not set',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

@@ -71,10 +71,9 @@ class LoginNotifier extends StateNotifier<LoginState> {
 
       // Backend se access_token aur user aata hai
       // Response format: { data: { access_token: '...', user: {...} } }
-      final data = response['data'] ?? response; // data field ya direct
-
-      final token = data['access_token'] as String; // JWT token
-      final user = data['user'] as Map<String, dynamic>; // User info
+      final data = ApiService.unwrapMap(response);
+      final token = data['access_token'] as String;
+      final user = data['user'] as Map<String, dynamic>;
 
       // Token phone storage mein save karo
       await TokenService.saveToken(token);

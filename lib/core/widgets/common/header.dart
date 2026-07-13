@@ -11,6 +11,9 @@ class DoctorListHeader extends StatelessWidget {
   final bool showSearch;
   final Color? firstColor;
   final Color? secondColor;
+  final ValueChanged<String>? onSearchChanged;
+  final bool autofocus;
+  final FocusNode? focusNode;
 
   const DoctorListHeader({
     super.key,
@@ -22,6 +25,9 @@ class DoctorListHeader extends StatelessWidget {
     this.showSearch = true,
     this.firstColor,
     this.secondColor,
+    this.onSearchChanged,
+    this.autofocus = false,
+    this.focusNode,
   });
 
   @override
@@ -46,8 +52,7 @@ class DoctorListHeader extends StatelessWidget {
         children: [
           if (leading != null) ...[leading!, const SizedBox(height: 20)],
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
@@ -55,6 +60,8 @@ class DoctorListHeader extends StatelessWidget {
                   children: [
                     Text(
                       title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.white,
                         fontSize: 28,
@@ -62,9 +69,11 @@ class DoctorListHeader extends StatelessWidget {
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     Text(
                       shortText,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.white,
                         fontSize: 13,
@@ -75,12 +84,20 @@ class DoctorListHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) trailing!,
+              if (trailing != null) ...[
+                const SizedBox(width: 12),
+                Flexible(child: trailing!),
+              ],
             ],
           ),
           if (showSearch) ...[
             const SizedBox(height: 15),
-            SearchWidget(hintText: hintText),
+            SearchWidget(
+              hintText: hintText,
+              onChanged: onSearchChanged,
+              autofocus: autofocus,
+              focusNode: focusNode,
+            ),
           ],
         ],
       ),

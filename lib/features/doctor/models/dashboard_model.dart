@@ -1,20 +1,28 @@
-// Dashboard Model - Doctor dashboard stats ka data model
+import 'appointment_model.dart';
+
+// Dashboard Model - Robust implementation for Real Backend Data
 class DashboardModel {
   final int totalPatients;
   final int totalAppointments;
+  final int upcomingAppointments;
   final int completedAppointments;
+  final int cancelledAppointments;
   final int pendingAppointments;
+  final int todaysAppointmentsCount;
   final double totalEarnings;
   final double todayEarnings;
   final int thisWeekAppointments;
-  final List<AppointmentStats> recentAppointments;
+  final List<DoctorAppointmentModel> recentAppointments;
   final List<EarningStats> earningsChart;
 
   const DashboardModel({
     required this.totalPatients,
     required this.totalAppointments,
+    required this.upcomingAppointments,
     required this.completedAppointments,
+    required this.cancelledAppointments,
     required this.pendingAppointments,
+    required this.todaysAppointmentsCount,
     required this.totalEarnings,
     required this.todayEarnings,
     required this.thisWeekAppointments,
@@ -22,19 +30,22 @@ class DashboardModel {
     required this.earningsChart,
   });
 
-  // JSON se model create karne ke liye
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
+    // Robust parsing to handle different backend naming conventions
     return DashboardModel(
-      totalPatients: json['totalPatients'] ?? 0,
-      totalAppointments: json['totalAppointments'] ?? 0,
-      completedAppointments: json['completedAppointments'] ?? 0,
-      pendingAppointments: json['pendingAppointments'] ?? 0,
-      totalEarnings: (json['totalEarnings'] ?? 0).toDouble(),
-      todayEarnings: (json['todayEarnings'] ?? 0).toDouble(),
-      thisWeekAppointments: json['thisWeekAppointments'] ?? 0,
+      totalPatients: json['totalPatients'] ?? json['patientsCount'] ?? 0,
+      totalAppointments: json['totalAppointments'] ?? json['appointmentsCount'] ?? 0,
+      upcomingAppointments: json['upcomingAppointments'] ?? json['upcomingCount'] ?? 0,
+      completedAppointments: json['completedAppointments'] ?? json['completedCount'] ?? 0,
+      cancelledAppointments: json['cancelledAppointments'] ?? json['cancelledCount'] ?? 0,
+      pendingAppointments: json['pendingAppointments'] ?? json['pendingCount'] ?? 0,
+      todaysAppointmentsCount: json['todaysAppointmentsCount'] ?? json['todayCount'] ?? 0,
+      totalEarnings: (json['totalEarnings'] ?? json['earnings'] ?? 0).toDouble(),
+      todayEarnings: (json['todayEarnings'] ?? json['todayEarning'] ?? 0).toDouble(),
+      thisWeekAppointments: json['thisWeekAppointments'] ?? json['weekCount'] ?? 0,
       recentAppointments: json['recentAppointments'] != null
           ? (json['recentAppointments'] as List)
-              .map((e) => AppointmentStats.fromJson(e))
+              .map((e) => DoctorAppointmentModel.fromJson(e))
               .toList()
           : [],
       earningsChart: json['earningsChart'] != null
@@ -46,31 +57,6 @@ class DashboardModel {
   }
 }
 
-// Appointment Stats Model - Recent appointments ke liye
-class AppointmentStats {
-  final String patientName;
-  final String date;
-  final String time;
-  final String status;
-
-  const AppointmentStats({
-    required this.patientName,
-    required this.date,
-    required this.time,
-    required this.status,
-  });
-
-  factory AppointmentStats.fromJson(Map<String, dynamic> json) {
-    return AppointmentStats(
-      patientName: json['patientName'] ?? '',
-      date: json['date'] ?? '',
-      time: json['time'] ?? '',
-      status: json['status'] ?? '',
-    );
-  }
-}
-
-// Earning Stats Model - Earnings chart ke liye
 class EarningStats {
   final String date;
   final double amount;
@@ -82,8 +68,8 @@ class EarningStats {
 
   factory EarningStats.fromJson(Map<String, dynamic> json) {
     return EarningStats(
-      date: json['date'] ?? '',
-      amount: (json['amount'] ?? 0).toDouble(),
+      date: json['date'] ?? json['day'] ?? '',
+      amount: (json['amount'] ?? json['value'] ?? 0).toDouble(),
     );
   }
 }

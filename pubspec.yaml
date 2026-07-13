@@ -19,6 +19,8 @@ dependencies:
   cached_network_image: ^3.3.1
   http: ^1.2.1                    # Backend API calls ke liye
   shared_preferences: ^2.2.2      # JWT token local storage ke liye
+  webview_flutter: ^4.7.0         # Embedded video/meeting UI
+  url_launcher: ^6.3.1            # Open Jitsi in browser on web/desktop
 
 dev_dependencies:
   flutter_test:

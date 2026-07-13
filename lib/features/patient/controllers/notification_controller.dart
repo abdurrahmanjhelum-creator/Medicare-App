@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/token_service.dart';
 import '../models/notification_model.dart';
 
 class NotificationState {
@@ -40,6 +39,10 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
   // Fetch notifications from backend
   Future<void> fetchNotifications() async {
+    // Security check: Only fetch if the user is a patient
+    final role = await TokenService.getUserRole();
+    if (role != 'patient') return;
+
     state = state.copyWith(isLoading: true, error: null);
     try {
       final response = await ApiService.get(
@@ -47,35 +50,39 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         auth: true,
       );
 
-      final data = response['data'] ?? response;
-      if (data is List) {
-        final notifications = data.map((n) => NotificationModel.fromJson(n)).toList();
-        state = state.copyWith(
-          notifications: notifications,
-          isLoading: false,
-        );
-      } else {
-        state = state.copyWith(isLoading: false);
-      }
+      final list = ApiService.unwrapList(response, listKey: 'notifications');
+      final notificationsList =
+          list.map((n) => NotificationModel.fromJson(n)).toList();
+      state = state.copyWith(
+        notifications: notificationsList,
+        isLoading: false,
+      );
     } catch (e) {
+      if (e.toString().contains('permissions')) return;
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
       );
-      // Load dummy data on error
-      _loadDummyData();
     }
   }
 
   // Mark notification as read
   Future<void> markAsRead(String notificationId) async {
     try {
-      await ApiService.patch(
+      await ApiService.put(
         endpoint: '/notifications/mark-read',
         body: {'notificationId': notificationId},
         auth: true,
       );
-      await fetchNotifications();
+      
+      final updatedNotifications = state.notifications.map((notification) {
+        if (notification.id == notificationId) {
+          return notification.copyWith(isRead: true);
+        }
+        return notification;
+      }).toList();
+
+      state = state.copyWith(notifications: updatedNotifications);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -84,12 +91,17 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   // Mark all as read
   Future<void> markAllAsRead() async {
     try {
-      await ApiService.patch(
+      await ApiService.put(
         endpoint: '/notifications/mark-all-read',
         body: {},
         auth: true,
       );
-      await fetchNotifications();
+      
+      final updatedNotifications = state.notifications.map((notification) {
+        return notification.copyWith(isRead: true);
+      }).toList();
+
+      state = state.copyWith(notifications: updatedNotifications);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -102,45 +114,13 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         endpoint: '/notifications/$notificationId',
         auth: true,
       );
-      await fetchNotifications();
+      
+      final updatedNotifications =
+          state.notifications.where((n) => n.id != notificationId).toList();
+
+      state = state.copyWith(notifications: updatedNotifications);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
-  }
-
-  void _loadDummyData() {
-    state = state.copyWith(
-      notifications: [
-        NotificationModel(
-          title: "Appointment Reminder",
-          subtitle:
-              "You have an appointment with Dr. Sarah Johnson tomorrow at 10:00 AM",
-          time: "2 hours ago",
-          icon: Icons.calendar_today_outlined,
-          iconBgColor: const Color(0xFFE0F2F1),
-          iconColor: AppColors.primaryGreen,
-          isRead: false,
-        ),
-        NotificationModel(
-          title: "Lab Report Ready",
-          subtitle:
-              "Your blood test results are now available for download",
-          time: "5 hours ago",
-          icon: Icons.description_outlined,
-          iconBgColor: const Color(0xFFE0F2F1),
-          iconColor: AppColors.primaryGreen,
-          isRead: false,
-        ),
-        NotificationModel(
-          title: "Prescription Refill",
-          subtitle: "Your prescription for Amoxicillin is ready for pickup",
-          time: "1 day ago",
-          icon: Icons.medication_outlined,
-          iconBgColor: const Color(0xFFFFF8E1),
-          iconColor: AppColors.warning,
-          isRead: true,
-        ),
-      ],
-    );
   }
 }

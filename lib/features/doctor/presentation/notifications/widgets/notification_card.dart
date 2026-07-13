@@ -16,15 +16,33 @@ class NotificationCard extends StatelessWidget {
     required this.onDelete,
   });
 
+  Color _parseColor(String colorStr, Color fallback) {
+    try {
+      String hex = colorStr.replaceAll('#', '').trim();
+      if (hex.isEmpty) return fallback;
+      if (hex.length == 6) {
+        hex = 'FF$hex';
+      }
+      return Color(int.parse(hex, radix: 16));
+    } catch (e) {
+      return fallback;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final Color iconColor = _parseColor(notification.iconColor, AppColors.primaryGreen);
+    final Color bgColor = notification.isRead 
+        ? AppColors.white 
+        : _parseColor(notification.backgroundColor, const Color(0xFFF3F4F6));
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: AppDimensions.spacing16),
         padding: const EdgeInsets.all(AppDimensions.spacing16),
         decoration: BoxDecoration(
-          color: notification.isRead ? AppColors.white : Color(int.parse(notification.backgroundColor.replaceAll('#', '0xFF'))),
+          color: bgColor,
           borderRadius: BorderRadius.circular(AppDimensions.radius12),
           boxShadow: [
             BoxShadow(
@@ -41,12 +59,12 @@ class NotificationCard extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: Color(int.parse(notification.iconColor.replaceAll('#', '0xFF'))).withAlpha((0.1 * 255).round()),
+                color: iconColor.withAlpha((0.1 * 255).round()),
                 borderRadius: BorderRadius.circular(AppDimensions.radius12),
               ),
               child: Icon(
                 _getIcon(notification.icon),
-                color: Color(int.parse(notification.iconColor.replaceAll('#', '0xFF'))),
+                color: iconColor,
                 size: 24,
               ),
             ),
